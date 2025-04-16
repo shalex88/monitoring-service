@@ -3,6 +3,7 @@ import json
 from datetime import datetime
 import threading
 import time
+import sqlite3
 
 rabbitmq_host = 'localhost'
 exchange_name = 'camera_stats'
@@ -31,8 +32,24 @@ data_lock = threading.Lock()  # Lock to synchronize access to current_data_store
 current_second = None  # Track the current second being processed
 
 def save_to_database(data):
-    """Simulate saving data to a database."""
+    """Save data to the SQLite database."""
     print(f"Saving to database: {data}")
+    # Create a new connection and cursor for this thread
+    conn = sqlite3.connect('camera_stats.db')
+    cursor = conn.cursor()
+
+    try:
+        timestamp = list(data.keys())[0]
+        camA = data[timestamp]["camA"]
+        camB = data[timestamp]["camB"]
+        cursor.execute('''
+            INSERT INTO stats (timestamp, camA_zoom, camA_focus, camB_zoom, camB_focus)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (timestamp, camA["zoom"], camA["focus"], camB["zoom"], camB["focus"]))
+        conn.commit()
+    finally:
+        # Close the connection
+        conn.close()
 
 def save_data():
     """Finalize and save the data for the current second."""
